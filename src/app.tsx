@@ -392,11 +392,11 @@ export default function App() {
             <div className="p-3 bg-slate-950 rounded border border-slate-800 space-y-1 text-xs font-mono">
               <div className="flex justify-between text-slate-400">
                 <span>Silencer Inlet Face Velocity:</span>
-                <span class="text-slate-200 font-bold">{designMetrics.faceVelocity.toFixed(2)} m/s</span>
+                <span className="text-slate-200 font-bold">{designMetrics.faceVelocity.toFixed(2)} m/s</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Baffle Interstitial Velocity:</span>
-                <span class="text-slate-200 font-bold">{designMetrics.interstitialVelocity.toFixed(2)} m/s</span>
+                <span className="text-slate-200 font-bold">{designMetrics.interstitialVelocity.toFixed(2)} m/s</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Self-Noise Generation Risk:</span>
