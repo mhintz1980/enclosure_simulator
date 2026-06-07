@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { SilencerProfile, CalculationResults } from './types';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { SilencerProfile, DuctMetrics } from './types';
 
 const SILENCER_PROFILES: SilencerProfile[] = [
   {
@@ -35,11 +35,18 @@ export default function App() {
   const [heatLoad, setHeatLoad] = useState(150); 
   const [combustionAirflow, setCombustionAirflow] = useState(12.0); 
   const [targetEnclosureTemp, setTargetEnclosureTemp] = useState(42.0); 
-  const [targetInsertionLoss, setTargetInsertionLoss] = useState(28); 
-  const [ductWidth, setDuctWidth] = useState(1.8); 
-  const [maxAllowedPressureDrop, setMaxAllowedPressureDrop] = useState(60); 
+  
+  const [intakeTargetLoss, setIntakeTargetLoss] = useState(20);
+  const [dischargeTargetLoss, setDischargeTargetLoss] = useState(28);
+  
+  const [intakeDuctWidth, setIntakeDuctWidth] = useState(1.8);
+  const [dischargeDuctWidth, setDischargeDuctWidth] = useState(1.8);
+  
+  const [intakeMaxDP, setIntakeMaxDP] = useState(30);
+  const [dischargeMaxDP, setDischargeMaxDP] = useState(30);
+
   const [optimizationFocus, setOptimizationFocus] = useState<'solve-height' | 'solve-pressure'>('solve-height');
-  const [activeHelp, setActiveHelp] = useState(null);
+  const [activeHelp, setActiveHelp] = useState<string | null>(null);
   const [roadblockExpanded, setRoadblockExpanded] = useState(false);
 
   const [chatMessages, setChatMessages] = useState([
@@ -56,30 +63,6 @@ export default function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
-  const handleSendMessage = (text: string) => {
-    if (!text.trim()) return;
-    setChatMessages(prev => [...prev, { role: 'user', content: text }]);
-    setIsAiLoading(true);
-
-    setTimeout(() => {
-      let responseContent = `Calculated response audit: The static pressure drop is currently ${designMetrics.computedPressureDrop.toFixed(1)} Pa, and the target insertion loss is set to ${targetInsertionLoss} dB.`;
-      
-      const query = text.toLowerCase();
-      if (query.includes('retrieve') || query.includes('perkins') || query.includes('cummins')) {
-        responseContent = `Successfully retrieved technical specifications: Heat Load has been set to 110 kW and Combustion/Radiator Airflow has been set to 8.5 m³/s.`;
-        setHeatLoad(110);
-        setCombustionAirflow(8.5);
-      } else if (query.includes('audit') || query.includes('check') || query.includes('verify')) {
-        responseContent = `Engineering Audit Report: Ambient temperature is 32.5°C. Design Airflow is ${designMetrics.designAirflow.toFixed(1)} m³/s. Status is currently [${designMetrics.status}]. ${designMetrics.statusMsg}`;
-      } else if (query.includes('solve') || query.includes('height') || query.includes('pressure')) {
-        responseContent = `Optimization focus is set to [${optimizationFocus}]. Duct area resolved to ${designMetrics.calculatedArea.toFixed(2)} m² (resolved height is ${designMetrics.ductHeight.toFixed(2)}m).`;
-      }
-      
-      setChatMessages(prev => [...prev, { role: 'assistant', content: responseContent }]);
-      setIsAiLoading(false);
-    }, 800);
-  };
-
   const designMetrics = useMemo(() => {
     const T_AMBIENT = 32.5; 
     const CP_AIR = 1.005; 
@@ -91,41 +74,58 @@ export default function App() {
     const isAirflowDeficient = combustionAirflow < qThermalRequired;
     const designAirflow = isAirflowDeficient ? qThermalRequired : combustionAirflow;
 
-    let selectedProfile = SILENCER_PROFILES[1];
-    if (targetInsertionLoss <= 20) selectedProfile = SILENCER_PROFILES[0];
-    else if (targetInsertionLoss > 35) selectedProfile = SILENCER_PROFILES[2];
+    const calculateDuctMetrics = (targetLoss: number, ductWidth: number, maxDP: number): DuctMetrics => {
+      let selectedProfile = SILENCER_PROFILES[1];
+      if (targetLoss <= 20) selectedProfile = SILENCER_PROFILES[0];
+      else if (targetLoss > 35) selectedProfile = SILENCER_PROFILES[2];
 
-    let ductHeight = 1.5;
+      let ductHeight = 1.5;
 
-    if (optimizationFocus === 'solve-height') {
-      const maxAllowedVelocity = Math.sqrt((2 * maxAllowedPressureDrop) / (selectedProfile.lossCoefficientK * airDensityEnclosure));
-      const reqDuctArea = designAirflow / maxAllowedVelocity;
-      ductHeight = Math.max(0.3, reqDuctArea / ductWidth);
-    } else {
-      const defaultDuctHeight = 1.6;
-      ductHeight = defaultDuctHeight;
-    }
+      if (optimizationFocus === 'solve-height') {
+        const maxAllowedVelocity = Math.sqrt((2 * maxDP) / (selectedProfile.lossCoefficientK * airDensityEnclosure));
+        const reqDuctArea = designAirflow / maxAllowedVelocity;
+        ductHeight = Math.max(0.3, reqDuctArea / ductWidth);
+      } else {
+        const defaultDuctHeight = 1.6;
+        ductHeight = defaultDuctHeight;
+      }
 
-    const calculatedArea = ductWidth * ductHeight;
-    const faceVelocity = designAirflow / calculatedArea;
-    const computedPressureDrop = selectedProfile.lossCoefficientK * 0.5 * airDensityEnclosure * Math.pow(faceVelocity, 2);
-    const interstitialVelocity = faceVelocity / (selectedProfile.openArea / 100);
-    const selfNoiseRisk = interstitialVelocity > 15 ? 'CRITICAL' : interstitialVelocity > 10 ? 'MODERATE' : 'LOW';
+      const calculatedArea = ductWidth * ductHeight;
+      const faceVelocity = designAirflow / calculatedArea;
+      const computedPressureDrop = selectedProfile.lossCoefficientK * 0.5 * airDensityEnclosure * Math.pow(faceVelocity, 2);
+      const interstitialVelocity = faceVelocity / (selectedProfile.openArea / 100);
+      const selfNoiseRisk = interstitialVelocity > 15 ? 'CRITICAL' : interstitialVelocity > 10 ? 'MODERATE' : 'LOW';
 
-    let status = 'OPTIMAL';
+      return {
+        selectedProfile,
+        ductHeight,
+        calculatedArea,
+        faceVelocity,
+        interstitialVelocity,
+        computedPressureDrop,
+        selfNoiseRisk,
+      };
+    };
+
+    const intakeMetrics = calculateDuctMetrics(intakeTargetLoss, intakeDuctWidth, intakeMaxDP);
+    const dischargeMetrics = calculateDuctMetrics(dischargeTargetLoss, dischargeDuctWidth, dischargeMaxDP);
+    
+    const totalSystemPressureDrop = intakeMetrics.computedPressureDrop + dischargeMetrics.computedPressureDrop;
+
+    let status = 'OPTIMAL' as 'OPTIMAL' | 'WARNING' | 'CRITICAL';
     let statusMsg = 'System matches Caterpillar and Price Industries standards.';
     
-    if (computedPressureDrop > 100) {
+    if (totalSystemPressureDrop > 100) {
       status = 'CRITICAL';
       statusMsg = 'High static restriction risks radiator fan stalling and generator thermal shutdown.';
-    } else if (computedPressureDrop > 60 || isAirflowDeficient || selfNoiseRisk === 'CRITICAL') {
+    } else if (totalSystemPressureDrop > 60 || isAirflowDeficient || intakeMetrics.selfNoiseRisk === 'CRITICAL' || dischargeMetrics.selfNoiseRisk === 'CRITICAL') {
       status = 'WARNING';
       if (isAirflowDeficient) {
         statusMsg = 'Engine radiator fan airflow is insufficient to reject generator heat load at this temperature. Design flow auto-adjusted.';
-      } else if (selfNoiseRisk === 'CRITICAL') {
+      } else if (intakeMetrics.selfNoiseRisk === 'CRITICAL' || dischargeMetrics.selfNoiseRisk === 'CRITICAL') {
         statusMsg = 'Baffle interstitial velocity is too high, generating self-noise that bypasses acoustic attenuation.';
       } else {
-        statusMsg = 'Static pressure drop is high. Verify radiator fan performance curve.';
+        statusMsg = 'Total system static pressure drop is high. Verify radiator fan performance curve.';
       }
     }
 
@@ -136,19 +136,39 @@ export default function App() {
       qThermalRequired,
       designAirflow,
       isAirflowDeficient,
-      selectedProfile,
-      ductHeight,
-      calculatedArea,
-      faceVelocity,
-      interstitialVelocity,
-      computedPressureDrop,
-      selfNoiseRisk,
+      intakeMetrics,
+      dischargeMetrics,
+      totalSystemPressureDrop,
       status,
       statusMsg,
     };
-  }, [heatLoad, combustionAirflow, targetEnclosureTemp, targetInsertionLoss, ductWidth, maxAllowedPressureDrop, optimizationFocus]);
+  }, [heatLoad, combustionAirflow, targetEnclosureTemp, intakeTargetLoss, dischargeTargetLoss, intakeDuctWidth, dischargeDuctWidth, intakeMaxDP, dischargeMaxDP, optimizationFocus]);
 
-  const renderInfoCollapsible = (id, docSection, descriptionText, exampleDetails) => {
+  const handleSendMessage = (text: string) => {
+    if (!text.trim()) return;
+    setChatMessages(prev => [...prev, { role: 'user', content: text }]);
+    setIsAiLoading(true);
+
+    setTimeout(() => {
+      let responseContent = `Calculated response audit: The total system static pressure drop is currently ${designMetrics.totalSystemPressureDrop.toFixed(1)} Pa.`;
+      
+      const query = text.toLowerCase();
+      if (query.includes('retrieve') || query.includes('perkins') || query.includes('cummins')) {
+        responseContent = `Successfully retrieved technical specifications: Heat Load has been set to 110 kW and Combustion/Radiator Airflow has been set to 8.5 m³/s.`;
+        setHeatLoad(110);
+        setCombustionAirflow(8.5);
+      } else if (query.includes('audit') || query.includes('check') || query.includes('verify')) {
+        responseContent = `Engineering Audit Report: Ambient temperature is 32.5°C. Design Airflow is ${designMetrics.designAirflow.toFixed(1)} m³/s. Status is currently [${designMetrics.status}]. ${designMetrics.statusMsg}`;
+      } else if (query.includes('solve') || query.includes('height') || query.includes('pressure')) {
+        responseContent = `Optimization focus is set to [${optimizationFocus}]. Intake height resolved to ${designMetrics.intakeMetrics.ductHeight.toFixed(2)}m and Discharge height resolved to ${designMetrics.dischargeMetrics.ductHeight.toFixed(2)}m.`;
+      }
+      
+      setChatMessages(prev => [...prev, { role: 'assistant', content: responseContent }]);
+      setIsAiLoading(false);
+    }, 800);
+  };
+
+  const renderInfoCollapsible = (id: string, docSection: string, descriptionText: string, exampleDetails: string) => {
     const isOpen = activeHelp === id;
     return (
       <div className="mt-1 border border-slate-800 rounded overflow-hidden text-[11px]">
@@ -190,8 +210,8 @@ export default function App() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-5 space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="xl:col-span-4 space-y-6">
           <div className="bg-slate-900 border border-amber-500/20 rounded-lg overflow-hidden">
             <button 
               type="button"
@@ -240,7 +260,7 @@ export default function App() {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider font-mono">Design Parameters</h3>
+            <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider font-mono">Core Parameters</h3>
             
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-mono">
@@ -299,111 +319,195 @@ export default function App() {
                 onChange={(e) => setTargetEnclosureTemp(Number(e.target.value))}
                 className="w-full accent-amber-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer"
               />
-              {renderInfoCollapsible(
-                'temp',
-                'Engine Thermal Operating Envelopes',
-                'Structural restriction bounds before standard power deratings activate.',
-                'Capped consistently around 45°C - 50°C to limit cooling matrix sizing constraints.'
-              )}
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-slate-800/60 grid grid-cols-3 gap-2 text-xs">
-              <div>
-                <label className="text-slate-400 font-mono block mb-1">Target Loss (dB)</label>
-                <input 
-                  type="number" 
-                  value={targetInsertionLoss} 
-                  onChange={(e) => setTargetInsertionLoss(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="text-slate-400 font-mono block mb-1">Duct Width (m)</label>
-                <input 
-                  type="number" 
-                  step="0.1" 
-                  value={ductWidth} 
-                  onChange={(e) => setDuctWidth(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="text-slate-400 font-mono block mb-1">Max ΔP (Pa)</label>
-                <input 
-                  type="number" 
-                  value={maxAllowedPressureDrop} 
-                  onChange={(e) => setMaxAllowedPressureDrop(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200"
-                />
-              </div>
             </div>
             
-            <div className="space-y-2 text-xs">
-              <label className="text-slate-400 font-mono block mb-1">Optimization Strategy</label>
+            <div className="space-y-2 text-xs pt-2 border-t border-slate-800/60">
+              <label className="text-slate-400 font-mono block mb-1">System Optimization Strategy</label>
               <select 
                 value={optimizationFocus}
-                onChange={(e) => setOptimizationFocus(e.target.value)}
+                onChange={(e) => setOptimizationFocus(e.target.value as 'solve-height' | 'solve-pressure')}
                 className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-slate-200 focus:outline-none focus:border-amber-500"
               >
-                <option value="solve-height">Solve for Required Height (Fixed Max ΔP)</option>
+                <option value="solve-height">Solve for Required Height (Constrained Max ΔP)</option>
                 <option value="solve-pressure">Calculate ΔP (Fixed Height 1.6m)</option>
               </select>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-7 space-y-6">
+        <div className="xl:col-span-8 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Intake Card */}
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-4">
+              <h3 className="text-sm font-semibold text-sky-400 uppercase tracking-wider font-mono flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                Intake Parameters
+              </h3>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <label className="text-slate-400 font-mono block mb-1">Target Loss (dB)</label>
+                  <input 
+                    type="number" 
+                    value={intakeTargetLoss} 
+                    onChange={(e) => setIntakeTargetLoss(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-mono block mb-1">Width (m)</label>
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={intakeDuctWidth} 
+                    onChange={(e) => setIntakeDuctWidth(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-mono block mb-1">Max ΔP (Pa)</label>
+                  <input 
+                    type="number" 
+                    value={intakeMaxDP} 
+                    onChange={(e) => setIntakeMaxDP(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 focus:border-sky-500 focus:outline-none"
+                    disabled={optimizationFocus !== 'solve-height'}
+                  />
+                </div>
+              </div>
+              <div className="pt-3 border-t border-slate-800/60 grid grid-cols-2 gap-2">
+                <div className="p-2 bg-slate-950 rounded border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-500 font-mono">Duct Area</div>
+                  <div className="text-sm font-bold text-white mt-0.5">{designMetrics.intakeMetrics.calculatedArea.toFixed(2)} m²</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{intakeDuctWidth}W × {designMetrics.intakeMetrics.ductHeight.toFixed(2)}H</div>
+                </div>
+                <div className="p-2 bg-slate-950 rounded border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-500 font-mono">ΔP Drop</div>
+                  <div className="text-sm font-bold text-sky-400 mt-0.5">{designMetrics.intakeMetrics.computedPressureDrop.toFixed(1)} Pa</div>
+                </div>
+                <div className="col-span-2 p-2 bg-slate-950 rounded border border-slate-800">
+                  <div className="text-[10px] text-slate-500 font-mono mb-1">Silencer Profile</div>
+                  <div className="text-xs font-bold text-slate-300">{designMetrics.intakeMetrics.selectedProfile.name.split(' (')[0]}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Discharge Card */}
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-4">
+              <h3 className="text-sm font-semibold text-rose-400 uppercase tracking-wider font-mono flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                Discharge Parameters
+              </h3>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <label className="text-slate-400 font-mono block mb-1">Target Loss (dB)</label>
+                  <input 
+                    type="number" 
+                    value={dischargeTargetLoss} 
+                    onChange={(e) => setDischargeTargetLoss(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-mono block mb-1">Width (m)</label>
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={dischargeDuctWidth} 
+                    onChange={(e) => setDischargeDuctWidth(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-mono block mb-1">Max ΔP (Pa)</label>
+                  <input 
+                    type="number" 
+                    value={dischargeMaxDP} 
+                    onChange={(e) => setDischargeMaxDP(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 focus:border-rose-500 focus:outline-none"
+                    disabled={optimizationFocus !== 'solve-height'}
+                  />
+                </div>
+              </div>
+              <div className="pt-3 border-t border-slate-800/60 grid grid-cols-2 gap-2">
+                <div className="p-2 bg-slate-950 rounded border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-500 font-mono">Duct Area</div>
+                  <div className="text-sm font-bold text-white mt-0.5">{designMetrics.dischargeMetrics.calculatedArea.toFixed(2)} m²</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{dischargeDuctWidth}W × {designMetrics.dischargeMetrics.ductHeight.toFixed(2)}H</div>
+                </div>
+                <div className="p-2 bg-slate-950 rounded border border-slate-800 text-center">
+                  <div className="text-[10px] text-slate-500 font-mono">ΔP Drop</div>
+                  <div className="text-sm font-bold text-rose-400 mt-0.5">{designMetrics.dischargeMetrics.computedPressureDrop.toFixed(1)} Pa</div>
+                </div>
+                <div className="col-span-2 p-2 bg-slate-950 rounded border border-slate-800">
+                  <div className="text-[10px] text-slate-500 font-mono mb-1">Silencer Profile</div>
+                  <div className="text-xs font-bold text-slate-300">{designMetrics.dischargeMetrics.selectedProfile.name.split(' (')[0]}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider font-mono">Live Metrics & Diagnostics</h3>
+            <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider font-mono">System Live Diagnostics</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-3 bg-slate-950 rounded border border-slate-800">
-                <div className="text-xs text-slate-500 font-mono">Required Duct Area</div>
-                <div className="text-lg font-bold text-white mt-1">
-                  {designMetrics.calculatedArea.toFixed(2)} m²
+              <div className="p-4 bg-slate-950 rounded border border-amber-500/30 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-slate-400 font-mono">Total System Pressure Drop</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Fan must overcome Intake + Discharge</div>
                 </div>
-                <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                  ({ductWidth}m W × {(designMetrics.calculatedArea / ductWidth).toFixed(2)}m H)
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-950 rounded border border-slate-800">
-                <div className="text-xs text-slate-500 font-mono">Silencer Selection</div>
-                <div className="text-lg font-bold text-amber-400 mt-1 truncate">
-                  {designMetrics.selectedProfile.name.split(' (')[0]}
+                <div className="text-2xl font-bold text-amber-400">
+                  {designMetrics.totalSystemPressureDrop.toFixed(1)} Pa
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-950 rounded border border-slate-800">
-                <div className="text-xs text-slate-500 font-mono">Predicted System Drop</div>
-                <div className="text-lg font-bold text-white mt-1">
-                  {designMetrics.computedPressureDrop.toFixed(1)} Pa
+              <div className="p-4 bg-slate-950 rounded border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-slate-400 font-mono">Min. Heat-Rejection Flow</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Airflow required for thermal balance</div>
                 </div>
-              </div>
-
-              <div className="p-3 bg-slate-950 rounded border border-slate-800">
-                <div className="text-xs text-slate-500 font-mono">Min. Heat-Rejection Flow</div>
-                <div className="text-lg font-bold text-white mt-1">
+                <div className="text-xl font-bold text-white">
                   {designMetrics.qThermalRequired.toFixed(2)} m³/s
                 </div>
               </div>
             </div>
 
-            <div className="p-3 bg-slate-950 rounded border border-slate-800 space-y-1 text-xs font-mono">
-              <div className="flex justify-between text-slate-400">
-                <span>Silencer Inlet Face Velocity:</span>
-                <span className="text-slate-200 font-bold">{designMetrics.faceVelocity.toFixed(2)} m/s</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-slate-950 rounded border border-slate-800 space-y-2 text-xs font-mono">
+                <div className="text-sky-400 border-b border-slate-800 pb-1 mb-2 font-bold">INTAKE DIAGNOSTICS</div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Face Velocity:</span>
+                  <span className="text-slate-200 font-bold">{designMetrics.intakeMetrics.faceVelocity.toFixed(2)} m/s</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Interstitial Vel:</span>
+                  <span className="text-slate-200 font-bold">{designMetrics.intakeMetrics.interstitialVelocity.toFixed(2)} m/s</span>
+                </div>
+                <div className="flex justify-between text-slate-400 pt-1">
+                  <span>Self-Noise Risk:</span>
+                  <span className={`font-bold ${
+                    designMetrics.intakeMetrics.selfNoiseRisk === 'CRITICAL' ? 'text-rose-400' :
+                    designMetrics.intakeMetrics.selfNoiseRisk === 'MODERATE' ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>{designMetrics.intakeMetrics.selfNoiseRisk}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Baffle Interstitial Velocity:</span>
-                <span className="text-slate-200 font-bold">{designMetrics.interstitialVelocity.toFixed(2)} m/s</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Self-Noise Generation Risk:</span>
-                <span className={`font-bold ${
-                  designMetrics.selfNoiseRisk === 'CRITICAL' ? 'text-rose-400' :
-                  designMetrics.selfNoiseRisk === 'MODERATE' ? 'text-amber-400' : 'text-emerald-400'
-                }`}>{designMetrics.selfNoiseRisk}</span>
+
+              <div className="p-3 bg-slate-950 rounded border border-slate-800 space-y-2 text-xs font-mono">
+                <div className="text-rose-400 border-b border-slate-800 pb-1 mb-2 font-bold">DISCHARGE DIAGNOSTICS</div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Face Velocity:</span>
+                  <span className="text-slate-200 font-bold">{designMetrics.dischargeMetrics.faceVelocity.toFixed(2)} m/s</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Interstitial Vel:</span>
+                  <span className="text-slate-200 font-bold">{designMetrics.dischargeMetrics.interstitialVelocity.toFixed(2)} m/s</span>
+                </div>
+                <div className="flex justify-between text-slate-400 pt-1">
+                  <span>Self-Noise Risk:</span>
+                  <span className={`font-bold ${
+                    designMetrics.dischargeMetrics.selfNoiseRisk === 'CRITICAL' ? 'text-rose-400' :
+                    designMetrics.dischargeMetrics.selfNoiseRisk === 'MODERATE' ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>{designMetrics.dischargeMetrics.selfNoiseRisk}</span>
+                </div>
               </div>
             </div>
 

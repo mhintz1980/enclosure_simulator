@@ -8,13 +8,7 @@ export interface SilencerProfile {
   idealRange: [number, number];
 }
 
-export interface CalculationResults {
-  T_AMBIENT: number;
-  airDensityEnclosure: number;
-  deltaT: number;
-  qThermalRequired: number;
-  designAirflow: number;
-  isAirflowDeficient: boolean;
+export interface DuctMetrics {
   selectedProfile: SilencerProfile;
   ductHeight: number;
   calculatedArea: number;
@@ -22,6 +16,18 @@ export interface CalculationResults {
   interstitialVelocity: number;
   computedPressureDrop: number;
   selfNoiseRisk: 'LOW' | 'MODERATE' | 'CRITICAL';
+}
+
+export interface CalculationResults {
+  T_AMBIENT: number;
+  airDensityEnclosure: number;
+  deltaT: number;
+  qThermalRequired: number;
+  designAirflow: number;
+  isAirflowDeficient: boolean;
+  intakeMetrics: DuctMetrics;
+  dischargeMetrics: DuctMetrics;
+  totalSystemPressureDrop: number;
   status: 'OPTIMAL' | 'WARNING' | 'CRITICAL';
   statusMsg: string;
 }
