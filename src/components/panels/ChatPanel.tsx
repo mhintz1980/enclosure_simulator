@@ -34,7 +34,7 @@ export function ChatPanel({
   return (
     <Card className="flex flex-col h-[280px] p-0">
       <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-950/40 rounded-t-lg flex items-center justify-between text-xs font-mono text-slate-400">
-        <span>🤖 Ventilation & Acoustics Co-Pilot Chat</span>
+        <span>🤖 Pump Enclosure Design Co-Pilot</span>
         <span className={`h-2 w-2 rounded-full ${isLoading ? 'bg-amber-500' : 'bg-emerald-500'} animate-pulse`}></span>
       </div>
 

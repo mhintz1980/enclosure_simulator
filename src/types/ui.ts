@@ -20,12 +20,30 @@ export interface DuctConfig {
 }
 
 export interface CalculationInputs {
-  heatLoad: number;
-  combustionAirflow: number;
+  /** Engine radiated heat rejection inside enclosure (kW) */
+  engineHeat: number;
+  /** Engine radiator fan airflow capacity (m³/s) */
+  radiatorAirflow: number;
+  /** Maximum allowed temperature inside enclosure (°C) */
   targetEnclosureTemp: number;
+  /** Vacuum pump configuration (type, heat, oil cooler) */
+  vacuumPumpConfig: import('./index').VacuumPumpConfig;
+  /** Intake silencer duct configuration */
   intakeConfig: DuctConfig;
+  /** Discharge silencer duct configuration */
   dischargeConfig: DuctConfig;
+  /** Optimization strategy */
   optimizationFocus: 'solve-height' | 'solve-pressure';
+  /** Mount type for vibration assessment */
+  mountType: import('./index').MountType;
+  /** Enclosure outer dimensions */
+  enclosureDimensions: import('./index').EnclosureDimensions;
+  /** Noise measurement distances in meters */
+  noiseMeasurementDistances: number[];
+  /** Directivity placement for noise calculations */
+  directivityPlacement: import('./index').DirectivityPlacement;
+  /** Estimated source sound power level (dB) — from engine specs or estimate */
+  sourceSWL: number;
 }
 
 export interface ChatMessage {
@@ -37,9 +55,15 @@ export type OptimizationFocus = 'solve-height' | 'solve-pressure';
 export type Status = 'OPTIMAL' | 'WARNING' | 'CRITICAL';
 export type SelfNoiseRisk = 'LOW' | 'MODERATE' | 'CRITICAL';
 
-export interface Preset {
+export interface PumpPackagePreset {
   name: string;
-  heatLoad: number;
-  combustionAirflow: number;
+  engineManufacturer: string;
+  engineModel: string;
+  engineHeat: number;
+  radiatorAirflow: number;
   targetEnclosureTemp: number;
+  pumpType: import('./index').PumpType;
+  vacuumPumpType: import('./index').VacuumPumpType;
+  vacuumPumpHeat: number;
+  sourceSWL: number;
 }

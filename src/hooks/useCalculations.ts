@@ -1,13 +1,17 @@
 import { useMemo } from 'react';
-import { CalculationInputs } from '../utils/calculations';
+import { CalculationInputs } from '../types/ui';
 import { CalculationResults } from '../types';
 import { calculateResults } from '../utils/calculations';
 
 export function useCalculations(inputs: CalculationInputs): CalculationResults {
   return useMemo(() => calculateResults(inputs), [
-    inputs.heatLoad,
-    inputs.combustionAirflow,
+    inputs.engineHeat,
+    inputs.radiatorAirflow,
     inputs.targetEnclosureTemp,
+    inputs.vacuumPumpConfig.type,
+    inputs.vacuumPumpConfig.heatRejection,
+    inputs.vacuumPumpConfig.hasOilCooler,
+    inputs.vacuumPumpConfig.oilCoolerHeat,
     inputs.intakeConfig.targetLoss,
     inputs.intakeConfig.ductWidth,
     inputs.intakeConfig.maxDP,
@@ -15,5 +19,9 @@ export function useCalculations(inputs: CalculationInputs): CalculationResults {
     inputs.dischargeConfig.ductWidth,
     inputs.dischargeConfig.maxDP,
     inputs.optimizationFocus,
+    inputs.mountType,
+    inputs.sourceSWL,
+    inputs.directivityPlacement,
+    inputs.noiseMeasurementDistances,
   ]);
 }
