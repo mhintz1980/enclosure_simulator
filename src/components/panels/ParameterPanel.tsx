@@ -7,6 +7,8 @@ import {
   DirectivityPlacement,
 } from '../../types';
 import { VACUUM_PUMP_HEAT_REFERENCE, DIRECTIVITY_FACTORS, ENGINE_PRESETS } from '../../utils/constants';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, convertFromDisplay, getUnitLabel } from '../../utils/units';
 
 interface ParameterPanelProps {
   // Engine
@@ -39,6 +41,8 @@ interface ParameterPanelProps {
     isAirflowDeficient: boolean;
     totalHeatLoad: number;
   };
+  // Unit System
+  unitSystem: UnitSystem;
 }
 
 export function ParameterPanel({
@@ -61,6 +65,7 @@ export function ParameterPanel({
   directivityPlacement,
   onDirectivityPlacementChange,
   designMetrics,
+  unitSystem,
 }: ParameterPanelProps) {
   const hasVacPump = vacuumPumpConfig.type !== 'none';
 
@@ -74,12 +79,12 @@ export function ParameterPanel({
         <div className="space-y-4">
           <Slider
             label="Engine Heat Rejection"
-            value={engineHeat}
-            onChange={onEngineHeatChange}
-            min={1}
-            max={100}
-            step={0.5}
-            unit="kW"
+            value={convertToDisplay(engineHeat, 'heatLoad', unitSystem)}
+            onChange={(v) => onEngineHeatChange(convertFromDisplay(v, 'heatLoad', unitSystem))}
+            min={convertToDisplay(1, 'heatLoad', unitSystem)}
+            max={convertToDisplay(100, 'heatLoad', unitSystem)}
+            step={unitSystem === 'SI' ? 0.5 : 500}
+            unit={getUnitLabel('heatLoad', unitSystem)}
           />
           <Collapsible title="📖 What is this?" className="mt-1">
             <div className="space-y-1.5 text-slate-400">
@@ -113,12 +118,12 @@ export function ParameterPanel({
 
           <Slider
             label="Engine Radiator Fan Airflow"
-            value={radiatorAirflow}
-            onChange={onRadiatorAirflowChange}
-            min={0.1}
-            max={10}
-            step={0.1}
-            unit="m³/s"
+            value={convertToDisplay(radiatorAirflow, 'airflow', unitSystem)}
+            onChange={(v) => onRadiatorAirflowChange(convertFromDisplay(v, 'airflow', unitSystem))}
+            min={convertToDisplay(0.1, 'airflow', unitSystem)}
+            max={convertToDisplay(10, 'airflow', unitSystem)}
+            step={unitSystem === 'SI' ? 0.1 : 50}
+            unit={getUnitLabel('airflow', unitSystem)}
           />
           <Collapsible title="📖 What is this?" className="mt-1">
             <div className="space-y-1.5 text-slate-400">
@@ -131,12 +136,12 @@ export function ParameterPanel({
 
           <Slider
             label="Max Allowed Enclosure Temp"
-            value={targetEnclosureTemp}
-            onChange={onTargetEnclosureTempChange}
-            min={35}
-            max={65}
-            step={0.5}
-            unit="°C"
+            value={convertToDisplay(targetEnclosureTemp, 'temperature', unitSystem)}
+            onChange={(v) => onTargetEnclosureTempChange(convertFromDisplay(v, 'temperature', unitSystem))}
+            min={convertToDisplay(35, 'temperature', unitSystem)}
+            max={convertToDisplay(65, 'temperature', unitSystem)}
+            step={unitSystem === 'SI' ? 0.5 : 1}
+            unit={getUnitLabel('temperature', unitSystem)}
           />
 
           <div className="pt-2 border-t border-slate-800/60">
@@ -154,11 +159,11 @@ export function ParameterPanel({
           <div className="pt-2 border-t border-slate-800/60 text-xs space-y-1">
             <div className="flex justify-between text-slate-400 font-mono">
               <span>Total Heat Load:</span>
-              <span className="text-white font-bold">{designMetrics.totalHeatLoad.toFixed(1)} kW</span>
+              <span className="text-white font-bold">{convertToDisplay(designMetrics.totalHeatLoad, 'heatLoad', unitSystem).toFixed(1)} {getUnitLabel('heatLoad', unitSystem)}</span>
             </div>
             <div className="flex justify-between text-slate-400 font-mono">
               <span>Min. Cooling Airflow:</span>
-              <span className="text-white font-bold">{designMetrics.qThermalRequired.toFixed(2)} m³/s</span>
+              <span className="text-white font-bold">{convertToDisplay(designMetrics.qThermalRequired, 'airflow', unitSystem).toFixed(2)} {getUnitLabel('airflow', unitSystem)}</span>
             </div>
             <div className="flex justify-between text-slate-400 font-mono">
               <span>Design Airflow:</span>
@@ -203,12 +208,12 @@ export function ParameterPanel({
             <>
               <Slider
                 label="Vacuum Pump Heat Rejection"
-                value={vacuumPumpConfig.heatRejection}
-                onChange={(v) => onVacuumPumpConfigChange({ ...vacuumPumpConfig, heatRejection: v })}
-                min={0}
-                max={15}
-                step={0.5}
-                unit="kW"
+                value={convertToDisplay(vacuumPumpConfig.heatRejection, 'heatLoad', unitSystem)}
+                onChange={(v) => onVacuumPumpConfigChange({ ...vacuumPumpConfig, heatRejection: convertFromDisplay(v, 'heatLoad', unitSystem) })}
+                min={convertToDisplay(0, 'heatLoad', unitSystem)}
+                max={convertToDisplay(15, 'heatLoad', unitSystem)}
+                step={unitSystem === 'SI' ? 0.5 : 500}
+                unit={getUnitLabel('heatLoad', unitSystem)}
               />
               <Collapsible title="📖 What is this?" className="mt-1">
                 <div className="text-slate-400 text-xs">
@@ -223,12 +228,12 @@ export function ParameterPanel({
               {vacuumPumpConfig.type === 'rotary-vane-oil' && (
                 <Slider
                   label="Oil Cooler Heat (Inside Enclosure)"
-                  value={vacuumPumpConfig.oilCoolerHeat}
-                  onChange={(v) => onVacuumPumpConfigChange({ ...vacuumPumpConfig, oilCoolerHeat: v })}
-                  min={0}
-                  max={8}
-                  step={0.5}
-                  unit="kW"
+                  value={convertToDisplay(vacuumPumpConfig.oilCoolerHeat, 'heatLoad', unitSystem)}
+                  onChange={(v) => onVacuumPumpConfigChange({ ...vacuumPumpConfig, oilCoolerHeat: convertFromDisplay(v, 'heatLoad', unitSystem) })}
+                  min={convertToDisplay(0, 'heatLoad', unitSystem)}
+                  max={convertToDisplay(8, 'heatLoad', unitSystem)}
+                  step={unitSystem === 'SI' ? 0.5 : 250}
+                  unit={getUnitLabel('heatLoad', unitSystem)}
                 />
               )}
             </>
@@ -244,29 +249,29 @@ export function ParameterPanel({
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="block text-[10px] text-slate-500 font-mono mb-1">Length (m)</label>
+              <label className="block text-[10px] text-slate-500 font-mono mb-1">Length ({getUnitLabel('length', unitSystem)})</label>
               <input
-                type="number" step="0.1" min="0.5" max="10"
-                value={enclosureDimensions.length}
-                onChange={(e) => onEnclosureDimensionsChange({ ...enclosureDimensions, length: Number(e.target.value) })}
+                type="number" step="0.1" min="0.5" max="30"
+                value={convertToDisplay(enclosureDimensions.length, 'length', unitSystem).toFixed(1)}
+                onChange={(e) => onEnclosureDimensionsChange({ ...enclosureDimensions, length: convertFromDisplay(Number(e.target.value), 'length', unitSystem) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-slate-500 font-mono mb-1">Width (m)</label>
+              <label className="block text-[10px] text-slate-500 font-mono mb-1">Width ({getUnitLabel('length', unitSystem)})</label>
               <input
-                type="number" step="0.1" min="0.5" max="6"
-                value={enclosureDimensions.width}
-                onChange={(e) => onEnclosureDimensionsChange({ ...enclosureDimensions, width: Number(e.target.value) })}
+                type="number" step="0.1" min="0.5" max="20"
+                value={convertToDisplay(enclosureDimensions.width, 'length', unitSystem).toFixed(1)}
+                onChange={(e) => onEnclosureDimensionsChange({ ...enclosureDimensions, width: convertFromDisplay(Number(e.target.value), 'length', unitSystem) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-slate-500 font-mono mb-1">Height (m)</label>
+              <label className="block text-[10px] text-slate-500 font-mono mb-1">Height ({getUnitLabel('length', unitSystem)})</label>
               <input
-                type="number" step="0.1" min="0.5" max="4"
-                value={enclosureDimensions.height}
-                onChange={(e) => onEnclosureDimensionsChange({ ...enclosureDimensions, height: Number(e.target.value) })}
+                type="number" step="0.1" min="0.5" max="15"
+                value={convertToDisplay(enclosureDimensions.height, 'length', unitSystem).toFixed(1)}
+                onChange={(e) => onEnclosureDimensionsChange({ ...enclosureDimensions, height: convertFromDisplay(Number(e.target.value), 'length', unitSystem) })}
                 className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition"
               />
             </div>

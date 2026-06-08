@@ -8,21 +8,23 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
-  Legend,
   Cell,
 } from 'recharts';
 import { NoiseResults } from '../../types';
 import { NOISE_THRESHOLDS } from '../../utils/constants';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, getUnitLabel } from '../../utils/units';
 
 interface NoiseDistanceChartProps {
   noiseResults: NoiseResults;
+  unitSystem: UnitSystem;
 }
 
-export function NoiseDistanceChart({ noiseResults }: NoiseDistanceChartProps) {
+export function NoiseDistanceChart({ noiseResults, unitSystem }: NoiseDistanceChartProps) {
   // Merge attenuated and unattenuated data by distance
   const data = noiseResults.points.map((p, i) => ({
-    distance: `${p.distance}m`,
-    distanceNum: p.distance,
+    distance: `${convertToDisplay(p.distance, 'length', unitSystem).toFixed(0)}${getUnitLabel('length', unitSystem)}`,
+    distanceNum: convertToDisplay(p.distance, 'length', unitSystem),
     Unattenuated: p.spl,
     Attenuated: noiseResults.attenuatedPoints[i]?.spl ?? p.spl,
   }));

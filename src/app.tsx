@@ -12,12 +12,16 @@ import { DuctConfigPanel } from './components/panels/DuctConfigPanel';
 import { DiagnosticsPanel } from './components/panels/DiagnosticsPanel';
 import { ChatPanel } from './components/panels/ChatPanel';
 import { RoadblockSolver } from './components/panels/RoadblockSolver';
+import { useUnitSystem } from './hooks/useUnitSystem';
 
 export default function App() {
   // ── Engine & Thermal State ──
   const [engineHeat, setEngineHeat] = useState(7.0);
   const [radiatorAirflow, setRadiatorAirflow] = useState(2.0);
   const [targetEnclosureTemp, setTargetEnclosureTemp] = useState(45.0);
+
+  // ── Unit System ──
+  const [unitSystem, toggleUnitSystem] = useUnitSystem();
 
   // ── Vacuum Pump State ──
   const [vacuumPumpConfig, setVacuumPumpConfig] = useState<VacuumPumpConfig>({
@@ -99,7 +103,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
-      <Header status={designMetrics.status} />
+      <Header status={designMetrics.status} unitSystem={unitSystem} onToggleUnitSystem={toggleUnitSystem} />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <Sidebar className="xl:col-span-4">
@@ -133,6 +137,7 @@ export default function App() {
                 isAirflowDeficient: designMetrics.isAirflowDeficient,
                 totalHeatLoad: designMetrics.totalHeatLoad,
               }}
+              unitSystem={unitSystem}
             />
           </div>
         </Sidebar>
@@ -150,6 +155,7 @@ export default function App() {
               onMaxDPChange={setIntakeMaxDP}
               isMaxDPDisabled={optimizationFocus !== 'solve-height'}
               metrics={designMetrics.intakeMetrics}
+              unitSystem={unitSystem}
             />
 
             <DuctConfigPanel
@@ -163,6 +169,7 @@ export default function App() {
               onMaxDPChange={setDischargeMaxDP}
               isMaxDPDisabled={optimizationFocus !== 'solve-height'}
               metrics={designMetrics.dischargeMetrics}
+              unitSystem={unitSystem}
             />
           </div>
 
@@ -175,6 +182,7 @@ export default function App() {
             vacuumPumpConfig={vacuumPumpConfig}
             mountType={mountType}
             enclosureDimensions={enclosureDimensions}
+            unitSystem={unitSystem}
           />
 
           <ChatPanel

@@ -1,10 +1,13 @@
 import { EnclosureDimensions, VacuumPumpConfig, MountType } from '../../types';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, getUnitLabel } from '../../utils/units';
 
 interface EnclosurePlanViewProps {
   dimensions: EnclosureDimensions;
   vacuumPumpConfig: VacuumPumpConfig;
   mountType: MountType;
   designAirflow: number;
+  unitSystem: UnitSystem;
 }
 
 const SVG_W = 680;
@@ -36,6 +39,7 @@ export function EnclosurePlanView({
   vacuumPumpConfig,
   mountType,
   designAirflow,
+  unitSystem,
 }: EnclosurePlanViewProps) {
   const drawW = SVG_W - PADDING * 2;
   const drawH = SVG_H - PADDING * 2;
@@ -173,17 +177,17 @@ export function EnclosurePlanView({
         <line x1={encX} y1={encY + encH + 22} x2={encX + encW} y2={encY + encH + 22} stroke="#64748b" strokeWidth={0.8} />
         <line x1={encX} y1={encY + encH + 18} x2={encX} y2={encY + encH + 26} stroke="#64748b" strokeWidth={0.8} />
         <line x1={encX + encW} y1={encY + encH + 18} x2={encX + encW} y2={encY + encH + 26} stroke="#64748b" strokeWidth={0.8} />
-        <text x={encX + encW / 2} y={encY + encH + 34} fill="#94a3b8" fontSize={9} textAnchor="middle" fontFamily="JetBrains Mono, monospace">{dimensions.length.toFixed(1)}m</text>
+        <text x={encX + encW / 2} y={encY + encH + 34} fill="#94a3b8" fontSize={9} textAnchor="middle" fontFamily="JetBrains Mono, monospace">{convertToDisplay(dimensions.length, 'length', unitSystem).toFixed(1)}{getUnitLabel('length', unitSystem)}</text>
 
         {/* Width (vertical) */}
         <line x1={encX + encW + 22} y1={encY} x2={encX + encW + 22} y2={encY + encH} stroke="#64748b" strokeWidth={0.8} />
         <line x1={encX + encW + 18} y1={encY} x2={encX + encW + 26} y2={encY} stroke="#64748b" strokeWidth={0.8} />
         <line x1={encX + encW + 18} y1={encY + encH} x2={encX + encW + 26} y2={encY + encH} stroke="#64748b" strokeWidth={0.8} />
-        <text x={encX + encW + 36} y={encY + encH / 2 + 3} fill="#94a3b8" fontSize={9} textAnchor="middle" fontFamily="JetBrains Mono, monospace" transform={`rotate(90, ${encX + encW + 36}, ${encY + encH / 2})`}>{dimensions.width.toFixed(1)}m</text>
+        <text x={encX + encW + 36} y={encY + encH / 2 + 3} fill="#94a3b8" fontSize={9} textAnchor="middle" fontFamily="JetBrains Mono, monospace" transform={`rotate(90, ${encX + encW + 36}, ${encY + encH / 2})`}>{convertToDisplay(dimensions.width, 'length', unitSystem).toFixed(1)}{getUnitLabel('length', unitSystem)}</text>
 
         {/* Mount type label */}
         <text x={SVG_W / 2} y={SVG_H - 6} fill="#64748b" fontSize={8} textAnchor="middle" fontFamily="JetBrains Mono, monospace">
-          {mountType === 'trailer' ? '🚛 Trailer Mounted' : mountType === 'skid' ? '⬛ Skid Mounted' : '🏗️ Stationary'} — Airflow: {designAirflow.toFixed(2)} m³/s
+          {mountType === 'trailer' ? '🚛 Trailer Mounted' : mountType === 'skid' ? '⬛ Skid Mounted' : '🏗️ Stationary'} — Airflow: {convertToDisplay(designAirflow, 'airflow', unitSystem).toFixed(2)} {getUnitLabel('airflow', unitSystem)}
         </text>
       </svg>
 

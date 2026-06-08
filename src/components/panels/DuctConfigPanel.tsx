@@ -1,5 +1,7 @@
 import { Card, Input, Collapsible } from '../common';
 import { DuctMetrics } from '../../types';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, convertFromDisplay, getUnitLabel } from '../../utils/units';
 
 interface DuctConfigPanelProps {
   label: 'Intake' | 'Discharge';
@@ -12,6 +14,7 @@ interface DuctConfigPanelProps {
   onMaxDPChange: (value: number) => void;
   isMaxDPDisabled: boolean;
   metrics: DuctMetrics;
+  unitSystem: UnitSystem;
 }
 
 const colorClasses: Record<'sky' | 'rose', { accent: string; text: string; bg: string }> = {
@@ -30,6 +33,7 @@ export function DuctConfigPanel({
   onMaxDPChange,
   isMaxDPDisabled,
   metrics,
+  unitSystem,
 }: DuctConfigPanelProps) {
   const { text, bg } = colorClasses[color];
   const isIntake = label === 'Intake';
@@ -52,21 +56,21 @@ export function DuctConfigPanel({
         </div>
         <div>
           <Input
-            label="Width (m)"
+            label={`Width (${getUnitLabel('length', unitSystem)})`}
             type="number"
             step="0.1"
-            value={ductWidth}
-            onChange={(e) => onDuctWidthChange(Number(e.target.value))}
-            unit="m"
+            value={convertToDisplay(ductWidth, 'length', unitSystem)}
+            onChange={(e) => onDuctWidthChange(convertFromDisplay(Number(e.target.value), 'length', unitSystem))}
+            unit={getUnitLabel('length', unitSystem)}
           />
         </div>
         <div>
           <Input
-            label="Max ΔP (Pa)"
+            label={`Max ΔP (${getUnitLabel('pressure', unitSystem)})`}
             type="number"
-            value={maxDP}
-            onChange={(e) => onMaxDPChange(Number(e.target.value))}
-            unit="Pa"
+            value={convertToDisplay(maxDP, 'pressure', unitSystem)}
+            onChange={(e) => onMaxDPChange(convertFromDisplay(Number(e.target.value), 'pressure', unitSystem))}
+            unit={getUnitLabel('pressure', unitSystem)}
             disabled={isMaxDPDisabled}
           />
         </div>
@@ -95,7 +99,7 @@ export function DuctConfigPanel({
           )}
           <div className="pt-1 border-t border-slate-800/40">
             <p className="text-slate-500 text-[10px]">
-              <strong className="text-amber-400">Rule of thumb:</strong> Total system ΔP (intake + discharge) should stay under 60 Pa for most engine radiator fans. Over 100 Pa risks fan stalling.
+              <strong className="text-amber-400">Rule of thumb:</strong> Total system ΔP (intake + discharge) should stay under {convertToDisplay(60, 'pressure', unitSystem).toFixed(0)} {getUnitLabel('pressure', unitSystem)} for most engine radiator fans. Over {convertToDisplay(100, 'pressure', unitSystem).toFixed(0)} {getUnitLabel('pressure', unitSystem)} risks fan stalling.
             </p>
           </div>
         </div>
@@ -104,12 +108,12 @@ export function DuctConfigPanel({
       <div className="pt-3 border-t border-slate-800/60 grid grid-cols-2 gap-2">
         <div className="p-2 bg-slate-950 rounded border border-slate-800 text-center">
           <div className="text-[10px] text-slate-500 font-mono">Duct Area</div>
-          <div className="text-sm font-bold text-white mt-0.5">{metrics.calculatedArea.toFixed(2)} m²</div>
-          <div className="text-[10px] text-slate-400 mt-0.5">{ductWidth}W × {metrics.ductHeight.toFixed(2)}H</div>
+          <div className="text-sm font-bold text-white mt-0.5">{convertToDisplay(metrics.calculatedArea, 'area', unitSystem).toFixed(2)} {getUnitLabel('area', unitSystem)}</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">{convertToDisplay(ductWidth, 'length', unitSystem).toFixed(1)}W × {convertToDisplay(metrics.ductHeight, 'length', unitSystem).toFixed(2)}H</div>
         </div>
         <div className="p-2 bg-slate-950 rounded border border-slate-800 text-center">
           <div className="text-[10px] text-slate-500 font-mono">ΔP Drop</div>
-          <div className="text-sm font-bold" style={{ color: `var(--color-${text})` }}>{metrics.computedPressureDrop.toFixed(1)} Pa</div>
+          <div className="text-sm font-bold" style={{ color: `var(--color-${text})` }}>{convertToDisplay(metrics.computedPressureDrop, 'pressure', unitSystem).toFixed(1)} {getUnitLabel('pressure', unitSystem)}</div>
         </div>
         <div className="col-span-2 p-2 bg-slate-950 rounded border border-slate-800">
           <div className="text-[10px] text-slate-500 font-mono mb-1">Silencer Profile (Tortuous Path)</div>

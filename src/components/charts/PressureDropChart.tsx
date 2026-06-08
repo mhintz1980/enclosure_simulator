@@ -10,6 +10,8 @@ import {
   Legend,
 } from 'recharts';
 import { selectSilencerProfile } from '../../utils/calculations';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, getUnitLabel } from '../../utils/units';
 
 interface PressureDropChartProps {
   intakeTargetLoss: number;
@@ -20,6 +22,7 @@ interface PressureDropChartProps {
   airDensityEnclosure: number;
   currentIntakeHeight: number;
   currentDischargeHeight: number;
+  unitSystem: UnitSystem;
 }
 
 export function PressureDropChart({
@@ -31,6 +34,7 @@ export function PressureDropChart({
   airDensityEnclosure,
   currentIntakeHeight,
   currentDischargeHeight,
+  unitSystem,
 }: PressureDropChartProps) {
   const intakeProfile = selectSilencerProfile(intakeTargetLoss);
   const dischargeProfile = selectSilencerProfile(dischargeTargetLoss);
@@ -48,16 +52,16 @@ export function PressureDropChart({
     const dischargeDP = dischargeProfile.lossCoefficientK * 0.5 * airDensityEnclosure * Math.pow(dischargeFaceVel, 2);
 
     return {
-      height,
-      Intake: parseFloat(intakeDP.toFixed(1)),
-      Discharge: parseFloat(dischargeDP.toFixed(1)),
+      height: parseFloat(convertToDisplay(height, 'length', unitSystem).toFixed(1)),
+      Intake: parseFloat(convertToDisplay(intakeDP, 'pressure', unitSystem).toFixed(1)),
+      Discharge: parseFloat(convertToDisplay(dischargeDP, 'pressure', unitSystem).toFixed(1)),
     };
   });
 
   return (
     <div className="w-full">
       <p className="text-[10px] text-slate-500 font-mono mb-2 text-center">
-        Pressure Drop vs Duct Height (Pa)
+        Pressure Drop ({getUnitLabel('pressure', unitSystem)}) vs Duct Height ({getUnitLabel('length', unitSystem)})
       </p>
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
@@ -65,8 +69,8 @@ export function PressureDropChart({
           <XAxis
             dataKey="height"
             tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
-            label={{ value: 'Height (m)', position: 'insideBottom', offset: -2, fill: '#64748b', fontSize: 10 }}
-            tickFormatter={(v) => `${v}m`}
+            label={{ value: `Height (${getUnitLabel('length', unitSystem)})`, position: 'insideBottom', offset: -2, fill: '#64748b', fontSize: 10 }}
+            tickFormatter={(v) => `${v}${getUnitLabel('length', unitSystem)}`}
           />
           <YAxis
             tick={{ fill: '#94a3b8', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
@@ -82,13 +86,13 @@ export function PressureDropChart({
               fontFamily: 'JetBrains Mono, monospace',
               color: '#e2e8f0',
             }}
-            labelFormatter={(v) => `Height: ${v}m`}
-            formatter={(value, name) => [`${Number(value).toFixed(1)} Pa`, String(name)]}
+            labelFormatter={(v) => `Height: ${v}${getUnitLabel('length', unitSystem)}`}
+            formatter={(value, name) => [`${Number(value).toFixed(1)} ${getUnitLabel('pressure', unitSystem)}`, String(name)]}
           />
-          <ReferenceLine x={currentIntakeHeight} stroke="#38bdf8" strokeDasharray="4 2" opacity={0.6} />
-          <ReferenceLine x={currentDischargeHeight} stroke="#fb7185" strokeDasharray="4 2" opacity={0.6} />
-          <ReferenceLine y={60} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: '60 Pa warn', fill: '#f59e0b', fontSize: 9 }} />
-          <ReferenceLine y={100} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '100 Pa crit', fill: '#ef4444', fontSize: 9 }} />
+          <ReferenceLine x={parseFloat(convertToDisplay(currentIntakeHeight, 'length', unitSystem).toFixed(1))} stroke="#38bdf8" strokeDasharray="4 2" opacity={0.6} />
+          <ReferenceLine x={parseFloat(convertToDisplay(currentDischargeHeight, 'length', unitSystem).toFixed(1))} stroke="#fb7185" strokeDasharray="4 2" opacity={0.6} />
+          <ReferenceLine y={convertToDisplay(60, 'pressure', unitSystem)} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: `${convertToDisplay(60, 'pressure', unitSystem).toFixed(0)} warn`, fill: '#f59e0b', fontSize: 9 }} />
+          <ReferenceLine y={convertToDisplay(100, 'pressure', unitSystem)} stroke="#ef4444" strokeDasharray="3 3" label={{ value: `${convertToDisplay(100, 'pressure', unitSystem).toFixed(0)} crit`, fill: '#ef4444', fontSize: 9 }} />
           <Line
             type="monotone"
             dataKey="Intake"

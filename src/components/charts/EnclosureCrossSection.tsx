@@ -1,4 +1,6 @@
 import { EnclosureDimensions, VacuumPumpConfig, MountType, DuctMetrics } from '../../types';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, getUnitLabel } from '../../utils/units';
 
 interface EnclosureCrossSectionProps {
   dimensions: EnclosureDimensions;
@@ -7,6 +9,7 @@ interface EnclosureCrossSectionProps {
   vacuumPumpConfig: VacuumPumpConfig;
   mountType: MountType;
   designAirflow: number;
+  unitSystem: UnitSystem;
 }
 
 // SVG scaling
@@ -42,6 +45,7 @@ export function EnclosureCrossSection({
   vacuumPumpConfig,
   mountType,
   designAirflow,
+  unitSystem,
 }: EnclosureCrossSectionProps) {
   // Scale enclosure to fit SVG
   const drawW = SVG_W - PADDING * 2;
@@ -211,12 +215,12 @@ export function EnclosureCrossSection({
 
         {/* Dimension labels */}
         <text x={SVG_W / 2} y={mountY + mountH + 14} fill="#64748b" fontSize={9} textAnchor="middle" fontFamily="JetBrains Mono, monospace">
-          {dimensions.length.toFixed(1)}m L × {dimensions.width.toFixed(1)}m W × {dimensions.height.toFixed(1)}m H
+          {convertToDisplay(dimensions.length, 'length', unitSystem).toFixed(1)}{getUnitLabel('length', unitSystem)} L × {convertToDisplay(dimensions.width, 'length', unitSystem).toFixed(1)}{getUnitLabel('length', unitSystem)} W × {convertToDisplay(dimensions.height, 'length', unitSystem).toFixed(1)}{getUnitLabel('length', unitSystem)} H
         </text>
 
         {/* Airflow value label */}
         <text x={SVG_W / 2} y={encY + encH + mountH + 28} fill="#94a3b8" fontSize={8} textAnchor="middle" fontFamily="JetBrains Mono, monospace">
-          Design Airflow: {designAirflow.toFixed(2)} m³/s
+          Design Airflow: {convertToDisplay(designAirflow, 'airflow', unitSystem).toFixed(2)} {getUnitLabel('airflow', unitSystem)}
         </text>
       </svg>
 

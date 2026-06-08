@@ -8,6 +8,8 @@ import { EnclosureCrossSection } from '../charts/EnclosureCrossSection';
 import { EnclosurePlanView } from '../charts/EnclosurePlanView';
 import { NoiseDistanceChart } from '../charts/NoiseDistanceChart';
 import { CalculationResults, VacuumPumpConfig, MountType, EnclosureDimensions } from '../../types';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, getUnitLabel } from '../../utils/units';
 
 interface DiagnosticsPanelProps {
   results: CalculationResults;
@@ -18,6 +20,7 @@ interface DiagnosticsPanelProps {
   vacuumPumpConfig: VacuumPumpConfig;
   mountType: MountType;
   enclosureDimensions: EnclosureDimensions;
+  unitSystem: UnitSystem;
 }
 
 type ChartTab = 'cross-section' | 'plan-view' | 'noise' | 'attenuation' | 'pressure' | 'velocity' | 'geometry';
@@ -57,6 +60,7 @@ export function DiagnosticsPanel({
   vacuumPumpConfig,
   mountType,
   enclosureDimensions,
+  unitSystem,
 }: DiagnosticsPanelProps) {
   const [activeTab, setActiveTab] = useState<ChartTab>('cross-section');
 
@@ -74,7 +78,7 @@ export function DiagnosticsPanel({
             <div className="text-[10px] text-slate-500 mt-0.5">Intake + Discharge</div>
           </div>
           <div className="text-xl font-bold text-amber-400">
-            {results.totalSystemPressureDrop.toFixed(1)} Pa
+            {convertToDisplay(results.totalSystemPressureDrop, 'pressure', unitSystem).toFixed(1)} {getUnitLabel('pressure', unitSystem)}
           </div>
         </div>
 
@@ -84,7 +88,7 @@ export function DiagnosticsPanel({
             <div className="text-[10px] text-slate-500 mt-0.5">Engine + Vac Pump</div>
           </div>
           <div className="text-xl font-bold text-white">
-            {results.totalHeatLoad.toFixed(1)} kW
+            {convertToDisplay(results.totalHeatLoad, 'heatLoad', unitSystem).toFixed(1)} {getUnitLabel('heatLoad', unitSystem)}
           </div>
         </div>
 
@@ -94,7 +98,7 @@ export function DiagnosticsPanel({
             <div className="text-[10px] text-slate-500 mt-0.5">For thermal balance</div>
           </div>
           <div className="text-lg font-bold text-white">
-            {results.qThermalRequired.toFixed(2)} m³/s
+            {convertToDisplay(results.qThermalRequired, 'airflow', unitSystem).toFixed(2)} {getUnitLabel('airflow', unitSystem)}
           </div>
         </div>
       </div>
@@ -105,11 +109,11 @@ export function DiagnosticsPanel({
           <div className="text-sky-400 border-b border-slate-800 pb-1 mb-2 font-bold">INTAKE DIAGNOSTICS</div>
           <div className="flex justify-between text-slate-400">
             <span>Face Velocity:</span>
-            <span className="text-slate-200 font-bold">{results.intakeMetrics.faceVelocity.toFixed(2)} m/s</span>
+            <span className="text-slate-200 font-bold">{convertToDisplay(results.intakeMetrics.faceVelocity, 'velocity', unitSystem).toFixed(2)} {getUnitLabel('velocity', unitSystem)}</span>
           </div>
           <div className="flex justify-between text-slate-400">
             <span>Interstitial Vel:</span>
-            <span className="text-slate-200 font-bold">{results.intakeMetrics.interstitialVelocity.toFixed(2)} m/s</span>
+            <span className="text-slate-200 font-bold">{convertToDisplay(results.intakeMetrics.interstitialVelocity, 'velocity', unitSystem).toFixed(2)} {getUnitLabel('velocity', unitSystem)}</span>
           </div>
           <div className="flex justify-between text-slate-400 pt-1">
             <span>Self-Noise Risk:</span>
@@ -121,11 +125,11 @@ export function DiagnosticsPanel({
           <div className="text-rose-400 border-b border-slate-800 pb-1 mb-2 font-bold">DISCHARGE DIAGNOSTICS</div>
           <div className="flex justify-between text-slate-400">
             <span>Face Velocity:</span>
-            <span className="text-slate-200 font-bold">{results.dischargeMetrics.faceVelocity.toFixed(2)} m/s</span>
+            <span className="text-slate-200 font-bold">{convertToDisplay(results.dischargeMetrics.faceVelocity, 'velocity', unitSystem).toFixed(2)} {getUnitLabel('velocity', unitSystem)}</span>
           </div>
           <div className="flex justify-between text-slate-400">
             <span>Interstitial Vel:</span>
-            <span className="text-slate-200 font-bold">{results.dischargeMetrics.interstitialVelocity.toFixed(2)} m/s</span>
+            <span className="text-slate-200 font-bold">{convertToDisplay(results.dischargeMetrics.interstitialVelocity, 'velocity', unitSystem).toFixed(2)} {getUnitLabel('velocity', unitSystem)}</span>
           </div>
           <div className="flex justify-between text-slate-400 pt-1">
             <span>Self-Noise Risk:</span>
@@ -197,6 +201,7 @@ export function DiagnosticsPanel({
               vacuumPumpConfig={vacuumPumpConfig}
               mountType={mountType}
               designAirflow={results.designAirflow}
+              unitSystem={unitSystem}
             />
           )}
           {activeTab === 'plan-view' && (
@@ -205,10 +210,11 @@ export function DiagnosticsPanel({
               vacuumPumpConfig={vacuumPumpConfig}
               mountType={mountType}
               designAirflow={results.designAirflow}
+              unitSystem={unitSystem}
             />
           )}
           {activeTab === 'noise' && (
-            <NoiseDistanceChart noiseResults={results.noiseResults} />
+            <NoiseDistanceChart noiseResults={results.noiseResults} unitSystem={unitSystem} />
           )}
           {activeTab === 'attenuation' && (
             <AttenuationChart
@@ -226,12 +232,14 @@ export function DiagnosticsPanel({
               airDensityEnclosure={results.airDensityEnclosure}
               currentIntakeHeight={results.intakeMetrics.ductHeight}
               currentDischargeHeight={results.dischargeMetrics.ductHeight}
+              unitSystem={unitSystem}
             />
           )}
           {activeTab === 'velocity' && (
             <VelocityChart
               intakeMetrics={results.intakeMetrics}
               dischargeMetrics={results.dischargeMetrics}
+              unitSystem={unitSystem}
             />
           )}
           {activeTab === 'geometry' && (
@@ -240,6 +248,7 @@ export function DiagnosticsPanel({
               dischargeMetrics={results.dischargeMetrics}
               intakeDuctWidth={intakeDuctWidth}
               dischargeDuctWidth={dischargeDuctWidth}
+              unitSystem={unitSystem}
             />
           )}
         </div>

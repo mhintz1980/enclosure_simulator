@@ -1,10 +1,13 @@
 import { DuctMetrics } from '../../types';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, getUnitLabel } from '../../utils/units';
 
 interface DuctCrossSectionProps {
   intakeMetrics: DuctMetrics;
   dischargeMetrics: DuctMetrics;
   intakeDuctWidth: number;
   dischargeDuctWidth: number;
+  unitSystem: UnitSystem;
 }
 
 const SCALE = 80; // px per metre for height axis
@@ -19,9 +22,10 @@ interface BaffleViewProps {
   ductWidth: number;
   color: string;
   label: string;
+  unitSystem: UnitSystem;
 }
 
-function BaffleView({ metrics, ductWidth, color, label }: BaffleViewProps) {
+function BaffleView({ metrics, ductWidth, color, label, unitSystem }: BaffleViewProps) {
   const profile = metrics.selectedProfile;
 
   // Scale to SVG coords (cap display for extreme values)
@@ -97,13 +101,13 @@ function BaffleView({ metrics, ductWidth, color, label }: BaffleViewProps) {
         {/* Dimension: height arrow */}
         <line x1={4} y1={8} x2={4} y2={8 + svgHeight} stroke="#475569" strokeWidth={1} />
         <text x={2} y={8 + svgHeight / 2} fill="#64748b" fontSize={8} textAnchor="middle" transform={`rotate(-90,2,${8 + svgHeight / 2})`} fontFamily="JetBrains Mono, monospace">
-          {metrics.ductHeight.toFixed(2)}m
+          {convertToDisplay(metrics.ductHeight, 'length', unitSystem).toFixed(2)}{getUnitLabel('length', unitSystem)}
         </text>
 
         {/* Dimension: width */}
         <line x1={12} y1={8 + svgHeight + 6} x2={12 + svgWidth} y2={8 + svgHeight + 6} stroke="#475569" strokeWidth={1} />
         <text x={12 + svgWidth / 2} y={8 + svgHeight + 18} fill="#64748b" fontSize={8} textAnchor="middle" fontFamily="JetBrains Mono, monospace">
-          {ductWidth.toFixed(1)}m
+          {convertToDisplay(ductWidth, 'length', unitSystem).toFixed(1)}{getUnitLabel('length', unitSystem)}
         </text>
       </svg>
 
@@ -131,6 +135,7 @@ export function DuctCrossSection({
   dischargeMetrics,
   intakeDuctWidth,
   dischargeDuctWidth,
+  unitSystem,
 }: DuctCrossSectionProps) {
   return (
     <div className="w-full">
@@ -143,12 +148,14 @@ export function DuctCrossSection({
           ductWidth={intakeDuctWidth}
           color="#38bdf8"
           label="Intake"
+          unitSystem={unitSystem}
         />
         <BaffleView
           metrics={dischargeMetrics}
           ductWidth={dischargeDuctWidth}
           color="#fb7185"
           label="Discharge"
+          unitSystem={unitSystem}
         />
       </div>
     </div>

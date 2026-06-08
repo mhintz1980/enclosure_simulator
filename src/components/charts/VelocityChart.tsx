@@ -10,18 +10,23 @@ import {
   Cell,
 } from 'recharts';
 import { DuctMetrics } from '../../types';
+import { UnitSystem } from '../../hooks/useUnitSystem';
+import { convertToDisplay, getUnitLabel } from '../../utils/units';
 
 interface VelocityChartProps {
   intakeMetrics: DuctMetrics;
   dischargeMetrics: DuctMetrics;
+  unitSystem: UnitSystem;
 }
 
 const MODERATE_THRESHOLD = 10;
 const CRITICAL_THRESHOLD = 15;
 
-function velocityColor(value: number): string {
-  if (value > CRITICAL_THRESHOLD) return '#fb7185'; // rose
-  if (value > MODERATE_THRESHOLD) return '#fbbf24'; // amber
+function velocityColor(value: number, unitSystem: UnitSystem): string {
+  const crit = convertToDisplay(CRITICAL_THRESHOLD, 'velocity', unitSystem);
+  const mod = convertToDisplay(MODERATE_THRESHOLD, 'velocity', unitSystem);
+  if (value > crit) return '#fb7185'; // rose
+  if (value > mod) return '#fbbf24'; // amber
   return '#34d399'; // emerald
 }
 
@@ -30,13 +35,14 @@ interface CustomLabelProps {
   y?: number;
   width?: number;
   value?: number;
+  unitSystem?: UnitSystem;
 }
 
-const CustomLabel = ({ x = 0, y = 0, width = 0, value = 0 }: CustomLabelProps) => (
+const CustomLabel = ({ x = 0, y = 0, width = 0, value = 0, unitSystem = 'SI' }: CustomLabelProps) => (
   <text
     x={x + width / 2}
     y={y - 4}
-    fill={velocityColor(value)}
+    fill={velocityColor(value, unitSystem)}
     textAnchor="middle"
     fontSize={10}
     fontFamily="JetBrains Mono, monospace"
@@ -46,29 +52,29 @@ const CustomLabel = ({ x = 0, y = 0, width = 0, value = 0 }: CustomLabelProps) =
   </text>
 );
 
-export function VelocityChart({ intakeMetrics, dischargeMetrics }: VelocityChartProps) {
+export function VelocityChart({ intakeMetrics, dischargeMetrics, unitSystem }: VelocityChartProps) {
   const data = [
     {
       label: 'Intake Face',
-      value: parseFloat(intakeMetrics.faceVelocity.toFixed(2)),
+      value: parseFloat(convertToDisplay(intakeMetrics.faceVelocity, 'velocity', unitSystem).toFixed(2)),
       type: 'face',
       side: 'Intake',
     },
     {
       label: 'Intake Interstit.',
-      value: parseFloat(intakeMetrics.interstitialVelocity.toFixed(2)),
+      value: parseFloat(convertToDisplay(intakeMetrics.interstitialVelocity, 'velocity', unitSystem).toFixed(2)),
       type: 'interstitial',
       side: 'Intake',
     },
     {
       label: 'Discharge Face',
-      value: parseFloat(dischargeMetrics.faceVelocity.toFixed(2)),
+      value: parseFloat(convertToDisplay(dischargeMetrics.faceVelocity, 'velocity', unitSystem).toFixed(2)),
       type: 'face',
       side: 'Discharge',
     },
     {
       label: 'Discharge Interstit.',
-      value: parseFloat(dischargeMetrics.interstitialVelocity.toFixed(2)),
+      value: parseFloat(convertToDisplay(dischargeMetrics.interstitialVelocity, 'velocity', unitSystem).toFixed(2)),
       type: 'interstitial',
       side: 'Discharge',
     },
@@ -77,7 +83,7 @@ export function VelocityChart({ intakeMetrics, dischargeMetrics }: VelocityChart
   return (
     <div className="w-full">
       <p className="text-[10px] text-slate-500 font-mono mb-2 text-center">
-        Face &amp; Interstitial Velocity (m/s) — Thresholds: 10 / 15 m/s
+        Face &amp; Interstitial Velocity ({getUnitLabel('velocity', unitSystem)}) — Thresholds: {convertToDisplay(MODERATE_THRESHOLD, 'velocity', unitSystem).toFixed(0)} / {convertToDisplay(CRITICAL_THRESHOLD, 'velocity', unitSystem).toFixed(0)} {getUnitLabel('velocity', unitSystem)}
       </p>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 20, right: 20, bottom: 40, left: 10 }}>
@@ -105,25 +111,25 @@ export function VelocityChart({ intakeMetrics, dischargeMetrics }: VelocityChart
               fontFamily: 'JetBrains Mono, monospace',
               color: '#e2e8f0',
             }}
-            formatter={(value) => [`${Number(value).toFixed(2)} m/s`, 'Velocity']}
+            formatter={(value) => [`${Number(value).toFixed(2)} ${getUnitLabel('velocity', unitSystem)}`, 'Velocity']}
           />
           <ReferenceLine
-            y={MODERATE_THRESHOLD}
+            y={convertToDisplay(MODERATE_THRESHOLD, 'velocity', unitSystem)}
             stroke="#f59e0b"
             strokeDasharray="4 2"
             strokeWidth={1.5}
-            label={{ value: '10 m/s', fill: '#f59e0b', fontSize: 9, position: 'right' }}
+            label={{ value: `${convertToDisplay(MODERATE_THRESHOLD, 'velocity', unitSystem).toFixed(0)} ${getUnitLabel('velocity', unitSystem)}`, fill: '#f59e0b', fontSize: 9, position: 'right' }}
           />
           <ReferenceLine
-            y={CRITICAL_THRESHOLD}
+            y={convertToDisplay(CRITICAL_THRESHOLD, 'velocity', unitSystem)}
             stroke="#ef4444"
             strokeDasharray="4 2"
             strokeWidth={1.5}
-            label={{ value: '15 m/s', fill: '#ef4444', fontSize: 9, position: 'right' }}
+            label={{ value: `${convertToDisplay(CRITICAL_THRESHOLD, 'velocity', unitSystem).toFixed(0)} ${getUnitLabel('velocity', unitSystem)}`, fill: '#ef4444', fontSize: 9, position: 'right' }}
           />
-          <Bar dataKey="value" radius={[3, 3, 0, 0]} label={<CustomLabel />}>
+          <Bar dataKey="value" radius={[3, 3, 0, 0]} label={<CustomLabel unitSystem={unitSystem} />}>
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={velocityColor(entry.value)} fillOpacity={0.8} />
+              <Cell key={`cell-${index}`} fill={velocityColor(entry.value, unitSystem)} fillOpacity={0.8} />
             ))}
           </Bar>
         </BarChart>
